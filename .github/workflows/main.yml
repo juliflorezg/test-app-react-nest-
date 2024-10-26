@@ -1,0 +1,52 @@
+name: Build, Deploy to DockerHub
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Step 3: Log in to DockerHub
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Step 4: Set up Docker CLI
+      - name: Set up Docker CLI
+        uses: docker/setup-qemu-action@v2
+
+      # Step 5: Build Docker images
+      - name: Build Docker images
+        run: |
+          make docker-build-all
+
+      # Step 6: Tag and push images to DockerHub
+      - name: Push Docker images to DockerHub
+        env:
+          VERSION_TAG: ${{ github.sha }} # Use the Git SHA as a version tag, or customize this
+        run: |
+          # Tag and push for client-react-nginx image
+          docker tag client-react-nginx ${{ secrets.DOCKERHUB_USERNAME }}/test-app-react-client-nginx:latest
+          docker tag client-react-nginx ${{ secrets.DOCKERHUB_USERNAME }}/test-app-react-client-nginx:${{ env.VERSION_TAG }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-app-react-client-nginx:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-app-react-client-nginx:${{ env.VERSION_TAG }}
+
+          # Tag and push for api-nest image
+          docker tag api-nest ${{ secrets.DOCKERHUB_USERNAME }}/test-app-api-nest:latest
+          docker tag api-nest ${{ secrets.DOCKERHUB_USERNAME }}/test-app-api-nest:${{ env.VERSION_TAG }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-app-api-nest:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/test-app-api-nest:${{ env.VERSION_TAG }}
